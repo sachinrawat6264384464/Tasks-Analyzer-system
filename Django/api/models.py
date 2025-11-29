@@ -9,6 +9,7 @@ class Task(models.Model):
     estimated_hours = models.FloatField()
     importance = models.IntegerField()  # 1–10
     dependencies = models.JSONField(default=list)  # list of task IDs
-
+    priority_score = models.FloatField(null=True)  # <-- add this line
+    explanation = models.TextField(null=True, blank=True)
     def __str__(self):
         return self.title

@@ -6,21 +6,37 @@ from rest_framework.decorators import api_view
 from serializer import TaskInputSerializer
 from scoping import calculate_priority_score
 from datetime import datetime
+from .models import Task
 
-@api_view(['POST'])
+@api_view(['POST', 'GET'])
 def analyze_tasks(request):
     serializer = TaskInputSerializer(data=request.data, many=True)
 
     if not serializer.is_valid():
-        return Response({"error": serializer.errors}, status=400)
+     print("Serializer Errors:", serializer.errors)
+     return Response({"error": serializer.errors}, status=400)
 
-    tasks = serializer.data
+
+    tasks = serializer.validated_data
     scored_tasks = []
 
-    for task in tasks:
-        score, explanation = calculate_priority_score(task)
+    for task_data in tasks:
+        score, explanation = calculate_priority_score(task_data)
+
+        # Save to DB
+        task = Task(
+            title=task_data["title"],
+            due_date=task_data["due_date"],
+            estimated_hours=task_data["estimated_hours"],
+            importance=task_data["importance"],
+            dependencies=task_data["dependencies"],
+            priority_score=score,
+            explanation=explanation
+        )
+        task.save()
+
         scored_tasks.append({
-            **task,
+            **task_data,
             "priority_score": score,
             "explanation": explanation
         })
@@ -31,7 +47,8 @@ def analyze_tasks(request):
     return Response(scored_tasks)
 
 
+
 @api_view(['GET'])
 def suggest_tasks(request):
-    # Normally fetch from DB (optional)
-    return Response({"error": "No tasks stored in DB yet"})
+    tasks = Task.objects.all().values()
+    return Response(list(tasks))
